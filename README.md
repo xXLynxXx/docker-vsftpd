@@ -15,7 +15,7 @@ A 🐋Docker container that implements the **VSFTPD** server and has the followi
 
 ## How to get started
 
-To get started, you need to install `Docker` and Docker Compose on your machine before proceeding further. To do this, you can refer to the following Docker documentation for help:
+To get started, you need to install `Docker` and `Docker Compose` on your machine before proceeding further. To do this, you can refer to the following Docker documentation for help:
 
 -   [Install Docker Engine](https://docs.docker.com/engine/install/);
 -   [Install Docker Compose](https://docs.docker.com/compose/install/);
@@ -44,7 +44,7 @@ ftpadmin@server:~$ mkdir --mode 755 ~/VirtUser
 
 After all the preparatory steps, you can proceed to build and run the VSFTPd Docker container.
 
-### 2.1 via `**Docker-CLI**`
+### 2.1 via `Docker-CLI`
 
 Let's Build the Docker Image. We have prepared some Dockerfile based on Alpine/Ubuntu OS. These build instructions are no different, only the way the package managers of each OS work.
 
@@ -79,7 +79,7 @@ docker run --detach \
 vsftpd:latest
 ```
 
-### 2.2 via `**Docker-Compose**`
+### 2.2 via `Docker-Compose`
 
 In fact, all the commands above are combined in the Docker-Compose YAML file `docker-compose-ftp.yml`. Thus, with one command, you will create image and run a container with your configuration.
 
