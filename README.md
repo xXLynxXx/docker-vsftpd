@@ -61,7 +61,7 @@ docker build \
 ```
 
 -   `VSFTPD_VERSION`: is an argument specifying which version of VSFTPd to use when building. The default value `VSFTPD_VERSION=3.0.4`
--   `UID`: this is an argument that specifies the UID of the user that was created earlier ([Section 1](#1.-create-local-user-ftp-&-directory)). The default value `UID=1000`
+-   `UID`: this is an argument that specifies the UID of the user that was created earlier ([Section 1](#1-create-local-user-ftp--directory)). The default value `UID=1000`
 
 After creating the image, you need to run the Docker container based on it with correctly mounted volumes, forwarded ports, and additional environment variables.
 
