@@ -1,0 +1,26 @@
+Index: vsftpd-3.0.3/sysdeputil.c
+===================================================================
+--- vsftpd-3.0.3.orig/sysdeputil.c	2021-03-04 04:50:53.000000000 +0800
++++ vsftpd-3.0.3/sysdeputil.c	2021-03-04 05:04:53.604576003 +0800
+@@ -297,15 +297,19 @@
+         return 0;
+       }
+       p_crypted = crypt(str_getbuf(p_pass_str), p_spwd->sp_pwdp);
+-      if (!vsf_sysutil_strcmp(p_crypted, p_spwd->sp_pwdp))
++      if (NULL != p_crypted && !vsf_sysutil_strcmp(p_crypted, p_spwd->sp_pwdp))
+       {
+         return 1;
+       }
++      else
++      {
++        return 0;
++      }
+     }
+   }
+   #endif /* VSF_SYSDEP_HAVE_SHADOW */
+   p_crypted = crypt(str_getbuf(p_pass_str), p_pwd->pw_passwd);
+-  if (!vsf_sysutil_strcmp(p_crypted, p_pwd->pw_passwd))
++  if (NULL != p_crypted && !vsf_sysutil_strcmp(p_crypted, p_pwd->pw_passwd))
+   {
+     return 1;
+   }

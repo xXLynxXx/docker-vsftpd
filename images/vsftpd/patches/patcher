@@ -1,0 +1,162 @@
+#!/bin/bash
+#----INFO----
+# ls -l --sort=time /home/
+# ls - command
+# -l - short option (короткая опция)
+# --sort - long option (длинная опция) with argument "time" (--sort=time == --sort time)
+# /home/ - parameter
+# BASH интерпритирует всю команду как: ls -l --sort=time -- /home — отделяя параметры от опций через '--'
+#--------
+
+#Сообщение Help
+HELP_MESSAGE="Usage:
+ patcher [OPTIONS]
+
+Patcher is a small utility used to automatically transfer changes (patch-files) to the source code of Vsftpd .
+
+Options:
+ -a, --alpine               Apply patches for Alpine Linux
+ -u, --ubuntu               Apply patches for Ubuntu
+ -d, --docker               Apply a patch for Docker, fixing the SEGFAULT error leading to the exit of the container
+ -R, --reverse              \"Rollback\", that is, undo the changes made from the patch file. Used in conjunction with the -a -u -d options
+ -D DIR, --directory=DIR    Change directory to DIR where VSFTPd sources are stored (required option)
+ 
+ --help                      display this help"
+
+# Объявляем ассоциативный массив всех необходимых позиционных параметров и присваиваем пары ключ/значение
+declare -A MY_OPTIONS=( 
+  ["-a"]="--alpine"
+  ["-u"]="--ubuntu"
+  ["-d"]="--docker"
+  ["-R"]="--reverse"
+  ["-D"]="--directory"
+)
+
+# Записываем в переменную Позиционные параметры обработаные и разбитые через синтаксический анализ GetOpt()
+PARSED_ARGUMENTS=$(getopt -n patcher -o uadRD: -l ubuntu,alpine,docker,help,reverse,directory: -- $@)
+# Записываем в переменную статус выхода последней выполненной команды getopt (через спец.параметр $?)
+VALID_ARGUMENTS=$?
+
+# Проверяем если статус выхода getopt не равен 0, то выполнить функцию сообщающую об ошибке
+if [[ "$VALID_ARGUMENTS" != "0" ]]; then
+  error-msg
+fi
+
+# eval принимает строку в качестве аргумента и выполняет её как код,
+# set -- "$PARSED_ARGUMENTS" ('--' сбрасывает все переданные Позиционные параметры и устанавливает их из $PARSED_ARGUMENTS)
+eval set -- "$PARSED_ARGUMENTS"
+
+# Записываем все Позиционные параметры в отдельный массив
+OPTIONS=($@)
+
+# Функция выполняемая при возникновении ошибок getopt и возвращающая код выхода 1
+error-msg()
+{
+  echo -e "Try '\033[33mpatcher --help\033[0m' for more information."
+  exit 1
+}
+
+# Функция проверяющая опции влияющие на итоговые строки команд
+checkAffectingOption()
+{
+  # Проверям аргумент опции --directory на то, что это существующий каталог и записываем в переменную DIR, иначе Ошибка
+  if [[ $long_option = "--directory" ]]; then
+      ((i++))
+      if [[ -d ${OPTIONS[$i]} ]]; then
+        DIR=${OPTIONS[$i]}
+      else
+        echo "There is no such directory ${OPTIONS[$i]} maybe there is an error somewhere in the path"
+        exit 1
+      fi
+  fi
+
+  # Проверка наличия опции --reverse. Запоминаем в переменные значения, которые потом подставим в итоговые строки команд
+  if [[ $long_option = "--reverse" ]]; then
+    reverse="-R"
+    reverse_head="\033[1m(REVERSE)\033[0m\033[33m"
+  fi
+}
+
+# Функция проверяющая все передаваемые позиционные параметры
+checkAllOptions()
+{
+  # Вывод сообщения при передаче опции --help в любом месте или если не передано никаких аргументов
+  if [[ "${OPTIONS[@]}" =~ "--help" || "${OPTIONS[@]}" =~ ^"--"$ ]]; then
+    echo "$HELP_MESSAGE"
+    exit 1
+  fi
+
+  # Условие отбрасывающее дополнительные параметры следующие после --
+  if [[ "${OPTIONS[@]}" =~ "--"[[:space:]].* ]];then
+    echo -e "Does not work with additional parameters:${BASH_REMATCH[@]#*--}"
+    exit 1
+  fi
+
+  # Если в опциях не передано -D|--directory, то вывести сообщение ошибки и завершить выполнение с кодом 1
+  if [[ ! "${OPTIONS[@]}" =~ -D|--directory ]]; then
+    echo -e "Be sure to specify the path to the DIR directory where the VSFTPd sources are stored (option \033[33m-D DIR/--directory=DIR\033[0m)"
+    exit 1
+  fi
+}
+
+# Функция обрабатывающая дубликаты позиционных параметров и вызывающая checkAffectingOption()
+deduplication()
+{
+  # Объявление ассоциативного массива необходимого для обработки дубликатов
+  declare -A count
+
+  for (( i=0; i < ((${#OPTIONS[@]}-1)); i++))
+  do
+    # Присваиваем переменной long_option значения из массива MY_OPTIONS по ключу OPTION цикла, иначе присваиваем default значение (конструкция :=), тем самым приводя все опции к длинному стилю записи
+    long_option=${MY_OPTIONS[${OPTIONS[$i]}]:=${OPTIONS[$i]}}
+
+    # Проверяем существует ли в массиве count элемент с ключом long_option. Необходим для обработки дубликатов, если элемент существует, то Ошибка и код выхода 1
+    if [[ -z ${count[$long_option]} ]]; then
+      count[$long_option]=true
+    else
+      echo "Too many duplicate options, please check your input is correct"
+      exit 1
+    fi
+
+    # Вызываем функцию
+    checkAffectingOption
+  done
+}
+
+# Функция обрабатывающая финальные опции после предыдущих обработок
+checkFinalOptions()
+{
+  for (( i=0; i < ((${#OPTIONS[@]}-1)); i++))
+  do
+    long_option=${MY_OPTIONS[${OPTIONS[$i]}]:=${OPTIONS[$i]}}
+  # Проверяем поочерёдно Позиционные параметры на совпадение в case
+    case "$long_option" in
+      --ubuntu)
+        echo -e "\033[33m----- Ubuntu patches $reverse_head -----\033[0m"
+        # Запускаем цикл перебирающий строки из файла, и отбрасывающий по условию все начинающиеся с #
+        while IFS="" read -r patch
+        do
+          if [[ "$patch" =~ ^[^"#"] ]]; then
+            echo -e "\033[32m    patch -p1 -d $DIR -i $(pwd)/$patch $reverse \033[0m"
+            patch -p1 -d $DIR -i $(pwd)/$patch $reverse #--CMD
+          fi
+        done < series
+        echo -e "\033[33m------------\033[0m";;
+      --alpine)
+        echo -e "\033[33m----- Alpine fix $reverse_head -----\033[0m"
+        echo -e "\033[32m    patch -p1 -d $DIR -i $(pwd)/fix-wtmpx-alpine.patch $reverse \033[0m"
+        patch -p1 -d $DIR -i $(pwd)/fix-wtmpx-alpine.patch $reverse #--CMD
+        echo -e "\033[33m------------\033[0m";;
+      --docker)
+        echo -e "\033[33m----- Docker fix $reverse_head -----\033[0m"
+        echo -e "\033[32m    patch -p1 -d $DIR -i $(pwd)/fix-segfault-docker.patch $reverse \033[0m"
+        patch -p1 -d $DIR -i $(pwd)/fix-segfault-docker.patch $reverse #--CMD
+        echo -e "\033[33m------------\033[0m";;
+    esac
+  done
+}
+
+# Вызываем функции
+checkAllOptions
+deduplication
+checkFinalOptions

@@ -1,0 +1,13 @@
+Index: vsftpd-3.0.3/vsftpd.conf.5
+===================================================================
+--- vsftpd-3.0.3.orig/vsftpd.conf.5	2021-03-04 04:50:53.000000000 +0800
++++ vsftpd-3.0.3/vsftpd.conf.5	2021-03-04 05:31:41.935220305 +0800
+@@ -1022,7 +1022,7 @@
+ Default: (none)
+ .TP
+ .B user_sub_token
+-This option is useful is conjunction with virtual users. It is used to
++This option is useful in conjunction with virtual users. It is used to
+ automatically generate a home directory for each virtual user, based on a
+ template. For example, if the home directory of the real user specified via
+ .BR guest_username

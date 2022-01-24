@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+
+    # vsFTPd
+    vsftpd:
+        build:
+            context: images/vsftpd
+            dockerfile: Dockerfile.alpine # || Dockerfile.ubuntu
+            args:
+                VSFTPD_VERSION: 3.0.5
+                UID: 1001
+        image: vsftpd:latest
+        container_name: vsftpd
+        restart: always
+        # network_mode: "host" # needed to work in "Passive mode" FTP
+        volumes:
+            - ./applications/vsftpd/vsftpd.conf:/etc/vsftpd/vsftpd.conf # vsftpd configuration file
+            - ./applications/vsftpd/vsftpd.log:/var/log/vsftpd.log # LOG file
+            - ./applications/vsftpd/vsftpd.virtual:/etc/pam.d/vsftpd.virtual # vsftpd PAM authentication rules
+            - ./applications/vsftpd/virtual-users:/etc/vsftpd/virtual-users # virtual users from htpasswd generator
+            # - ./vsftpd.crt:/etc/vsftpd/cert/vsftpd.crt # SSL certificate for FTPS
+            # - ./vsftpd.key:/etc/vsftpd/cert/vsftpd.key # SSL private-key for FTPS
+            - /home/ftp:/home/ftp # Working directory
+        ports:
+            - 21:21/tcp # TCP port for FTP Command Channel
+            - 20:20/tcp # TCP port for FTP "Active Mode" Data Channel
+            - 40000-40010:40000-40010/tcp # TCP range ports for FTP "Passive Mode" Data Channel
+        environment:
+            TZ: 'Europe/Moscow' # changes timezone

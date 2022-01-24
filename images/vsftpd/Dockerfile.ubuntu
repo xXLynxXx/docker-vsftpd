@@ -1,0 +1,39 @@
+ARG VSFTPD_VERSION=3.0.4
+
+# Container build VSFTPD & PAM_pwdfile
+FROM ubuntu:latest AS builder
+
+ARG VSFTPD_VERSION
+
+WORKDIR /build
+RUN apt -y update && apt -y install make gcc libc6-dev libpam-dev libssl-dev git patch
+RUN git clone https://git.tiwe.de/libpam-pwdfile.git
+# Build PAM_pwdfile module
+RUN make -C /build/libpam-pwdfile/
+
+ADD https://security.appspot.com/downloads/vsftpd-${VSFTPD_VERSION}.tar.gz ./
+RUN tar -xzf vsftpd-${VSFTPD_VERSION}.tar.gz
+COPY ./patches ./patches
+WORKDIR /build/patches
+# Apply patches necessary for proper operation
+RUN chmod 755 ./patcher && ./patcher --ubuntu --alpine --docker --directory /build/vsftpd-${VSFTPD_VERSION}
+# Build VSFTPD
+RUN make -C /build/vsftpd-${VSFTPD_VERSION}
+
+# Main Container
+FROM ubuntu:latest
+
+ARG VSFTPD_VERSION
+ARG UID=1000
+
+COPY --from=builder /build/libpam-pwdfile/pam_pwdfile.so /usr/lib/x86_64-linux-gnu/security/
+COPY --from=builder /build/vsftpd-${VSFTPD_VERSION}/vsftpd /usr/sbin/
+
+# Create VSFTPd user/group first, to be consistent throughout docker variants
+RUN adduser --home /home/ftp --shell /sbin/nologin --uid ${UID} --disabled-password --gecos "" ftpadmin
+# Add the required VSFTPd dependencies and tzdata so that users can set timezones via environment variables. And create an empty directory used as a secure chroot() jail VSFTPd.
+RUN apt -y update && apt install -y tzdata libssl-dev && apt -y clean && mkdir -m 744 -p /var/run/vsftpd/empty
+
+EXPOSE 21/TCP 20/TCP
+CMD ["/usr/sbin/vsftpd","/etc/vsftpd/vsftpd.conf"]
+

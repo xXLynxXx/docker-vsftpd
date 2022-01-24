@@ -1,0 +1,2 @@
+auth	sufficient	/usr/lib/x86_64-linux-gnu/security/pam_pwdfile.so	pwdfile=/etc/vsftpd/virtual-users
+account	sufficient	/lib/security/pam_permit.so
