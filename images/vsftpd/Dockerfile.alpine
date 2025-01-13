@@ -34,5 +34,5 @@ RUN adduser --home /home/ftp --shell /sbin/nologin --uid ${UID} --disabled-passw
 # Add the required VSFTPd dependencies and tzdata so that users can set timezones via environment variables. And create an empty directory used as a secure chroot() jail VSFTPd.
 RUN apk add --no-cache linux-pam-dev openssl-dev tzdata && mkdir -m 744 -p /var/run/vsftpd/empty
 
-EXPOSE 21/TCP 20/TCP
+EXPOSE 21/tcp 20/tcp
 CMD ["/usr/sbin/vsftpd","/etc/vsftpd/vsftpd.conf"]
